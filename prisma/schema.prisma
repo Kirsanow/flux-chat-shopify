@@ -1,0 +1,158 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Note that some adapters may set a maximum length for the String type by default, please ensure your strings are long
+// enough when changing adapters.
+// See https://www.prisma.io/docs/orm/reference/prisma-schema-reference#string for more information
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["public"]
+}
+
+// Shopify session management
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+
+  @@schema("public")
+}
+
+// FluxChat specific models
+model UserProfile {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  timezone  String?
+  
+  stores Store[]
+  
+  @@map("user_profiles")
+  @@schema("public")
+}
+
+model Store {
+  id                   String   @id @default(cuid())
+  createdAt            DateTime @default(now()) @map("created_at")
+  updatedAt            DateTime @updatedAt @map("updated_at")
+  
+  // Shopify connection
+  storeName            String   @map("store_name")
+  shopifyDomain        String   @unique @map("shopify_domain")
+  shopifyAccessToken   String   @map("shopify_access_token")
+  isActive             Boolean  @default(true) @map("is_active")
+  
+  // AI configuration
+  aiConfig             Json?    @map("ai_config")
+  
+  // Sync configuration - extensibility key
+  syncConfig           Json?    @map("sync_config")
+  
+  userId String? @map("user_id")
+  user   UserProfile? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  products      Product[]
+  conversations Conversation[]
+  
+  @@map("stores")
+  @@schema("public")
+}
+
+model Product {
+  id                 String   @id @default(cuid())
+  createdAt          DateTime @default(now()) @map("created_at")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+  
+  // Core Shopify data
+  shopifyProductId   String   @map("shopify_product_id")
+  title              String
+  description        String?
+  handle             String?
+  productType        String?  @map("product_type")
+  vendor             String?
+  tags               String[] // Easy to query, extend
+  status             String   @default("active") // active, archived, draft
+  
+  // Pricing (can extend with variant-specific later)
+  priceMin           Decimal? @map("price_min")
+  priceMax           Decimal? @map("price_max")
+  
+  // Images (start simple, can normalize later)
+  imageUrl           String?  @map("image_url")
+  imageUrls          String[] @map("image_urls")
+  
+  // Inventory (simple now, can split by variant later)
+  totalInventory     Int?     @map("total_inventory")
+  availableForSale   Boolean  @default(true) @map("available_for_sale")
+  
+  // AI/Search (extensible)
+  embedding          Float[] // pgvector
+  embeddingModel     String?  @map("embedding_model")
+  lastEmbedded       DateTime? @map("last_embedded")
+  searchMetadata     Json?    @map("search_metadata")
+  
+  // Sync tracking (crucial for flexibility)
+  lastSynced         DateTime? @map("last_synced")
+  syncVersion        Int      @default(1) @map("sync_version")
+  syncMetadata       Json?    @map("sync_metadata")
+  
+  storeId String @map("store_id")
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  
+  @@unique([storeId, shopifyProductId])
+  @@index([storeId, status])
+  @@index([storeId, availableForSale])
+  @@map("products")
+  @@schema("public")
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  createdAt      DateTime @default(now()) @map("created_at")
+  role           String   // 'user', 'assistant', 'system'
+  content        String
+  metadata       Json?    // Tool calls, product references, etc.
+  
+  conversationId String @map("conversation_id")
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  
+  @@map("messages")
+  @@schema("public")
+}
+
+model Conversation {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  sessionId  String   @map("session_id") // Browser session
+  customerId String?  @map("customer_id") // If identified
+  status     String   @default("active") // active, resolved, abandoned
+  summary    String?  // AI-generated summary
+  
+  storeId String @map("store_id")
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  
+  messages Message[]
+  
+  @@index([storeId, status])
+  @@map("conversations")
+  @@schema("public")
+}
