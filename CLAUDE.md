@@ -190,6 +190,92 @@ SHOPIFY_API_SECRET=
 - Revenue attribution per store
 - Customer satisfaction ratings
 
+## Shopify Theme App Extensions - App Embeds Guide
+
+### Correct Structure for App Embeds
+
+App embeds are blocks that appear site-wide and can be toggled on/off in the theme editor under "App embeds". Here's the correct way to create them:
+
+#### 1. Extension Configuration (`shopify.extension.toml`)
+```toml
+name = "chat-widget"
+type = "theme"
+```
+
+**Important**: Use `type = "theme"` NOT `type = "app_embed"`. The latter is not a valid extension type.
+
+#### 2. Directory Structure
+```
+extensions/
+└── chat-widget/
+    ├── shopify.extension.toml
+    ├── blocks/
+    │   └── chat-widget.liquid    # Your app embed block
+    ├── assets/
+    │   ├── chat-widget.css
+    │   ├── chat-widget.js
+    │   └── (other assets)
+    └── locales/
+        └── en.default.json
+```
+
+#### 3. App Embed Block Configuration
+
+In your `blocks/chat-widget.liquid` file:
+
+```liquid
+{% comment %}
+  Your app embed block - appears in theme editor App embeds section
+{% endcomment %}
+
+<!-- Your HTML/CSS/JS here -->
+
+{% schema %}
+{
+  "name": "FluxChat Widget",
+  "target": "body",
+  "settings": [
+    {
+      "type": "select",
+      "id": "position", 
+      "label": "Widget Position",
+      "options": [
+        { "value": "bottom-right", "label": "Bottom Right" },
+        { "value": "bottom-left", "label": "Bottom Left" }
+      ],
+      "default": "bottom-right"
+    }
+  ]
+}
+{% endschema %}
+```
+
+#### 4. Key Points
+
+- **Target Options**: Use `"target": "body"`, `"target": "head"`, or `"target": "compliance_head"`
+- **Settings Access**: Use `{{ block.settings.setting_name | json }}` in liquid
+- **Merchant Control**: App embeds are disabled by default; merchants enable them in theme editor
+- **Site-wide**: App embeds load on all pages when enabled
+
+#### 5. Common Mistakes to Avoid
+
+❌ Don't use `type = "app_embed"` in TOML  
+❌ Don't create `app_embed.liquid` in root  
+❌ Don't use `app.embeds.extension_name.settings`  
+
+✅ Use `type = "theme"` in TOML  
+✅ Create blocks in `blocks/` directory  
+✅ Use `block.settings` for settings access  
+
+### Deployment
+
+After setting up the correct structure:
+```bash
+shopify app deploy
+```
+
+The app embed will appear in theme editor under "App embeds" section where merchants can toggle it on/off and configure settings.
+
 ---
 
 **Next Steps**: Create new repo, run `shopify app create`, and start with Phase 1 setup.

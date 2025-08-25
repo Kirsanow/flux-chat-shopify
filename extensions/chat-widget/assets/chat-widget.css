@@ -1,0 +1,797 @@
+/**
+ * FluxChat Widget Styles
+ * Clean, organized CSS following BEM methodology
+ * Responsive and accessible design
+ */
+
+/* CSS Custom Properties for easy theming */
+:root {
+  --flux-chat-primary: #007cba;
+  --flux-chat-primary-hover: #005a87;
+  --flux-chat-secondary: #f0f4f8;
+  --flux-chat-text: #2d3748;
+  --flux-chat-text-light: #718096;
+  --flux-chat-white: #ffffff;
+  --flux-chat-border: #e2e8f0;
+  --flux-chat-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  --flux-chat-radius: 12px;
+  --flux-chat-z-index: 1000000;
+  --flux-chat-transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Dark theme overrides */
+[data-flux-theme="dark"] {
+  --flux-chat-secondary: #2d3748;
+  --flux-chat-text: #f7fafc;
+  --flux-chat-text-light: #a0aec0;
+  --flux-chat-border: #4a5568;
+}
+
+/* Reset and base styles for widget components */
+.flux-chat-button,
+.flux-chat-modal {
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.flux-chat-button *,
+.flux-chat-modal * {
+  box-sizing: border-box;
+}
+
+/**
+ * Chat Button Styles
+ */
+.flux-chat-button {
+  position: fixed;
+  width: 64px;
+  height: 64px;
+  border: none;
+  border-radius: 50%;
+  background: var(--flux-chat-primary);
+  color: var(--flux-chat-white);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--flux-chat-shadow);
+  transition: var(--flux-chat-transition);
+  z-index: var(--flux-chat-z-index);
+  outline: none;
+  user-select: none;
+  transform: scale(1);
+}
+
+/* Position variants */
+.flux-chat-button--bottom-right {
+  bottom: 24px;
+  right: 24px;
+}
+
+.flux-chat-button--bottom-left {
+  bottom: 24px;
+  left: 24px;
+}
+
+/* Theme variants */
+.flux-chat-button--dark {
+  background: #2d3748;
+}
+
+.flux-chat-button--light {
+  background: var(--flux-chat-primary);
+}
+
+/* States */
+.flux-chat-button:hover {
+  transform: scale(1.1);
+  background: var(--flux-chat-primary-hover);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+}
+
+.flux-chat-button:active,
+.flux-chat-button--clicked {
+  transform: scale(0.95);
+}
+
+.flux-chat-button--active {
+  background: var(--flux-chat-primary-hover);
+}
+
+.flux-chat-button:focus-visible {
+  outline: 2px solid var(--flux-chat-primary);
+  outline-offset: 2px;
+}
+
+/* Button icon container */
+.flux-chat-button__icon {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flux-chat-button__icon svg {
+  width: 24px;
+  height: 24px;
+  transition: var(--flux-chat-transition);
+  position: absolute;
+}
+
+.flux-chat-button__icon-close {
+  opacity: 0;
+  transform: rotate(-90deg);
+}
+
+.flux-chat-button--active .flux-chat-button__icon-chat {
+  opacity: 0;
+  transform: rotate(90deg);
+}
+
+.flux-chat-button--active .flux-chat-button__icon-close {
+  opacity: 1;
+  transform: rotate(0deg);
+}
+
+/* Unread message badge */
+.flux-chat-button__badge {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  background: #ef4444;
+  border: 2px solid var(--flux-chat-white);
+  border-radius: 50%;
+  animation: flux-chat-pulse 2s infinite;
+}
+
+/* Pulse animation for new messages */
+.flux-chat-button__pulse {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 64px;
+  height: 64px;
+  border: 2px solid var(--flux-chat-primary);
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.flux-chat-button--pulse .flux-chat-button__pulse {
+  animation: flux-chat-ping 1s cubic-bezier(0, 0, 0.2, 1);
+}
+
+/* Entrance/Exit animations */
+.flux-chat-button--entering {
+  animation: flux-chat-bounce-in 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+}
+
+.flux-chat-button--leaving {
+  animation: flux-chat-fade-out 0.3s ease-out forwards;
+}
+
+/**
+ * Responsive adjustments
+ */
+@media (max-width: 768px) {
+  .flux-chat-button {
+    bottom: 16px;
+    right: 16px;
+  }
+  
+  .flux-chat-button--bottom-left {
+    left: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .flux-chat-button {
+    width: 56px;
+    height: 56px;
+  }
+  
+  .flux-chat-button__icon {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .flux-chat-button__icon svg {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+/**
+ * Keyframe animations
+ */
+@keyframes flux-chat-pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+}
+
+@keyframes flux-chat-ping {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0;
+  }
+}
+
+@keyframes flux-chat-bounce-in {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes flux-chat-fade-out {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+}
+
+/**
+ * Accessibility improvements
+ */
+@media (prefers-reduced-motion: reduce) {
+  .flux-chat-button,
+  .flux-chat-button *,
+  .flux-chat-modal,
+  .flux-chat-modal * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .flux-chat-button {
+    border: 2px solid currentColor;
+  }
+  
+  .flux-chat-button:focus-visible {
+    outline: 3px solid currentColor;
+    outline-offset: 3px;
+  }
+}
+
+/**
+ * Chat Modal Styles
+ */
+.flux-chat-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: calc(var(--flux-chat-z-index) + 1);
+  display: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+.flux-chat-modal__backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(2px);
+}
+
+.flux-chat-modal__container {
+  position: absolute;
+  bottom: 90px;
+  right: 24px;
+  width: 380px;
+  max-width: calc(100vw - 48px);
+  height: 600px;
+  max-height: calc(100vh - 140px);
+  background: var(--flux-chat-white);
+  border-radius: var(--flux-chat-radius);
+  box-shadow: var(--flux-chat-shadow);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  transition: var(--flux-chat-transition);
+}
+
+/* Dark theme */
+[data-flux-theme="dark"] .flux-chat-modal__container {
+  background: var(--flux-chat-secondary);
+  border: 1px solid var(--flux-chat-border);
+}
+
+/* Header */
+.flux-chat-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: var(--flux-chat-primary);
+  color: var(--flux-chat-white);
+}
+
+.flux-chat-modal__header-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+}
+
+.flux-chat-modal__title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+  color: inherit;
+}
+
+.flux-chat-modal__status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  opacity: 0.9;
+}
+
+.flux-chat-modal__status-dot {
+  width: 6px;
+  height: 6px;
+  background: #10b981;
+  border-radius: 50%;
+  animation: flux-chat-pulse 2s infinite;
+}
+
+.flux-chat-modal__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.flux-chat-modal__minimize-btn,
+.flux-chat-modal__close-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--flux-chat-white);
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--flux-chat-transition);
+}
+
+.flux-chat-modal__minimize-btn:hover,
+.flux-chat-modal__close-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.flux-chat-modal__minimize-btn svg,
+.flux-chat-modal__close-btn svg {
+  width: 16px;
+  height: 16px;
+}
+
+/* Messages container */
+.flux-chat-modal__messages {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+  scroll-behavior: smooth;
+}
+
+/* Welcome screen */
+.flux-chat-modal__welcome {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.flux-chat-modal__welcome-icon {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  color: var(--flux-chat-primary);
+}
+
+.flux-chat-modal__welcome-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.flux-chat-modal__welcome-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--flux-chat-text);
+  margin: 0 0 8px;
+}
+
+.flux-chat-modal__welcome-text {
+  font-size: 14px;
+  color: var(--flux-chat-text-light);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Individual messages */
+.flux-chat-modal__message {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+  opacity: 0;
+  animation: flux-chat-message-in 0.3s ease-out forwards;
+}
+
+.flux-chat-modal__message:last-child {
+  margin-bottom: 0;
+}
+
+.flux-chat-modal__message--user {
+  flex-direction: row-reverse;
+}
+
+.flux-chat-modal__message-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--flux-chat-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--flux-chat-text-light);
+}
+
+.flux-chat-modal__message--user .flux-chat-modal__message-avatar {
+  background: var(--flux-chat-primary);
+  color: var(--flux-chat-white);
+}
+
+.flux-chat-modal__message-avatar svg {
+  width: 18px;
+  height: 18px;
+}
+
+.flux-chat-modal__message-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.flux-chat-modal__message--user .flux-chat-modal__message-content {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.flux-chat-modal__message-text {
+  background: var(--flux-chat-secondary);
+  color: var(--flux-chat-text);
+  padding: 12px 16px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.4;
+  word-wrap: break-word;
+  max-width: 280px;
+}
+
+.flux-chat-modal__message--user .flux-chat-modal__message-text {
+  background: var(--flux-chat-primary);
+  color: var(--flux-chat-white);
+  border-bottom-right-radius: 6px;
+}
+
+.flux-chat-modal__message--assistant .flux-chat-modal__message-text {
+  border-bottom-left-radius: 6px;
+}
+
+.flux-chat-modal__message--error .flux-chat-modal__message-text {
+  background: #fef2f2;
+  color: #dc2626;
+  border: 1px solid #fecaca;
+}
+
+.flux-chat-modal__message-time {
+  font-size: 11px;
+  color: var(--flux-chat-text-light);
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+/* Typing indicator */
+.flux-chat-modal__typing-indicator {
+  background: var(--flux-chat-secondary);
+  padding: 12px 16px;
+  border-radius: 18px;
+  border-bottom-left-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.flux-chat-modal__typing-indicator span {
+  width: 6px;
+  height: 6px;
+  background: var(--flux-chat-text-light);
+  border-radius: 50%;
+  animation: flux-chat-typing 1.4s infinite ease-in-out;
+}
+
+.flux-chat-modal__typing-indicator span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.flux-chat-modal__typing-indicator span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+/* Input container */
+.flux-chat-modal__input-container {
+  border-top: 1px solid var(--flux-chat-border);
+  padding: 16px;
+  background: var(--flux-chat-white);
+}
+
+[data-flux-theme="dark"] .flux-chat-modal__input-container {
+  background: var(--flux-chat-secondary);
+}
+
+.flux-chat-modal__input-form {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.flux-chat-modal__input-wrapper {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.flux-chat-modal__input {
+  flex: 1;
+  min-height: 40px;
+  max-height: 120px;
+  padding: 10px 12px;
+  border: 1px solid var(--flux-chat-border);
+  border-radius: 20px;
+  background: var(--flux-chat-white);
+  color: var(--flux-chat-text);
+  font-size: 14px;
+  line-height: 1.4;
+  resize: none;
+  outline: none;
+  transition: var(--flux-chat-transition);
+}
+
+[data-flux-theme="dark"] .flux-chat-modal__input {
+  background: var(--flux-chat-secondary);
+  border-color: var(--flux-chat-border);
+}
+
+.flux-chat-modal__input:focus {
+  border-color: var(--flux-chat-primary);
+  box-shadow: 0 0 0 3px rgba(0, 124, 186, 0.1);
+}
+
+.flux-chat-modal__input::placeholder {
+  color: var(--flux-chat-text-light);
+}
+
+.flux-chat-modal__send-btn {
+  width: 40px;
+  height: 40px;
+  border: none;
+  border-radius: 50%;
+  background: var(--flux-chat-border);
+  color: var(--flux-chat-text-light);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: var(--flux-chat-transition);
+  flex-shrink: 0;
+}
+
+.flux-chat-modal__send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.flux-chat-modal__send-btn--active {
+  background: var(--flux-chat-primary);
+  color: var(--flux-chat-white);
+}
+
+.flux-chat-modal__send-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
+.flux-chat-modal__input-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.flux-chat-modal__char-count {
+  font-size: 11px;
+  color: var(--flux-chat-text-light);
+}
+
+.flux-chat-modal__char-count--warning {
+  color: #f59e0b;
+}
+
+/* Minimized state */
+.flux-chat-modal--minimized .flux-chat-modal__container {
+  height: auto;
+}
+
+.flux-chat-modal--minimized .flux-chat-modal__messages,
+.flux-chat-modal--minimized .flux-chat-modal__input-container {
+  display: none;
+}
+
+/* Modal animations */
+.flux-chat-modal--entering .flux-chat-modal__backdrop {
+  animation: flux-chat-fade-in 0.3s ease-out;
+}
+
+.flux-chat-modal--entering .flux-chat-modal__container {
+  animation: flux-chat-slide-up 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.flux-chat-modal--leaving .flux-chat-modal__backdrop {
+  animation: flux-chat-fade-out 0.3s ease-out;
+}
+
+.flux-chat-modal--leaving .flux-chat-modal__container {
+  animation: flux-chat-slide-down 0.3s ease-out;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .flux-chat-modal__backdrop {
+    background: rgba(0, 0, 0, 0.5);
+  }
+  
+  .flux-chat-modal__container {
+    bottom: 0;
+    right: 0;
+    left: 0;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    border-radius: 0;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
+  
+  .flux-chat-modal--minimized .flux-chat-modal__container {
+    height: auto;
+    bottom: auto;
+    top: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .flux-chat-modal__header {
+    padding: 12px 16px;
+  }
+  
+  .flux-chat-modal__messages {
+    padding: 12px;
+  }
+  
+  .flux-chat-modal__input-container {
+    padding: 12px;
+  }
+  
+  .flux-chat-modal__message-text {
+    max-width: 240px;
+  }
+}
+
+/**
+ * Additional keyframe animations
+ */
+@keyframes flux-chat-message-in {
+  0% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes flux-chat-typing {
+  0%, 60%, 100% {
+    transform: translateY(0);
+  }
+  30% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes flux-chat-fade-in {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes flux-chat-fade-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes flux-chat-slide-up {
+  0% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes flux-chat-slide-down {
+  0% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+}
+
+/**
+ * Print styles - hide chat widget when printing
+ */
+@media print {
+  .flux-chat-button,
+  .flux-chat-modal {
+    display: none !important;
+  }
+}
