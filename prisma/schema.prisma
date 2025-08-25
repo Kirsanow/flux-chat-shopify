@@ -37,18 +37,6 @@ model Session {
 }
 
 // FluxChat specific models
-model UserProfile {
-  id        String   @id @default(cuid())
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-  timezone  String?
-  
-  stores Store[]
-  
-  @@map("user_profiles")
-  @@schema("public")
-}
-
 model Store {
   id                   String   @id @default(cuid())
   createdAt            DateTime @default(now()) @map("created_at")
@@ -60,14 +48,11 @@ model Store {
   shopifyAccessToken   String   @map("shopify_access_token")
   isActive             Boolean  @default(true) @map("is_active")
   
-  // AI configuration
-  aiConfig             Json?    @map("ai_config")
-  
-  // Sync configuration - extensibility key
-  syncConfig           Json?    @map("sync_config")
-  
-  userId String? @map("user_id")
-  user   UserProfile? @relation(fields: [userId], references: [id], onDelete: Cascade)
+  // Flexible configuration fields (start empty, evolve over time)
+  aiConfig             Json?    @default("{}") @map("ai_config")
+  uiConfig             Json?    @default("{}") @map("ui_config") 
+  syncConfig           Json?    @default("{}") @map("sync_config")
+  featureFlags         Json?    @default("{}") @map("feature_flags")
   
   products      Product[]
   conversations Conversation[]
