@@ -142,13 +142,14 @@
   padding: 16px;
   overflow-y: auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .flux-welcome-message {
   text-align: center;
   color: #6b7280;
+  margin: auto;
 }
 
 .flux-message-avatar {
@@ -166,6 +167,45 @@
 .flux-welcome-message p {
   margin: 0;
   font-size: 14px;
+}
+
+/* Individual Messages */
+.flux-message {
+  display: flex;
+  margin-bottom: 8px;
+}
+
+.flux-message-user {
+  justify-content: flex-end;
+}
+
+.flux-message-ai {
+  justify-content: flex-start;
+}
+
+.flux-message-content {
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 16px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.flux-message-user .flux-message-content {
+  background: #434343;
+  color: white;
+  border-bottom-right-radius: 4px;
+}
+
+.flux-message-ai .flux-message-content {
+  background: #f3f4f6;
+  color: #374151;
+  border-bottom-left-radius: 4px;
+}
+
+.flux-message-text {
+  word-wrap: break-word;
+  white-space: pre-wrap;
 }
 
 /* Chat Input */

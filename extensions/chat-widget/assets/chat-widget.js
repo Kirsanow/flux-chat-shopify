@@ -145,12 +145,150 @@ class FluxChatWidget {
     this.bindEvents();
   }
 
-  sendMessage(message) {
+  async sendMessage(message) {
     if (!message.trim()) return;
 
     // Add user message to chat
-    // TODO: Implement actual message handling
-    console.log('Sending message:', message);
+    this.addMessageToChat('user', message);
+
+    // Add AI message placeholder for streaming
+    const aiMessageId = this.addMessageToChat('ai', '');
+
+    let response;
+
+    try {
+      // Build conversation history
+      const messages = this.getConversationHistory();
+
+      console.log('Sending request to:', this.config.apiUrl);
+      console.log('Messages:', messages);
+
+      // Call streaming API
+      response = await fetch(this.config.apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ messages }),
+      });
+
+      console.log('Response status:', response.status);
+      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        // Try to get error details
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${response.statusText}. Details: ${errorText}`);
+      }
+
+      // Handle streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let aiResponse = '';
+
+      if (reader) {
+        console.log('Starting to read stream...');
+
+        while (true) {
+          const { done, value } = await reader.read();
+
+          if (done) {
+            console.log('Stream finished');
+            break;
+          }
+
+          const chunk = decoder.decode(value, { stream: true });
+          console.log('Received chunk:', chunk);
+
+          aiResponse += chunk;
+
+          // Update the AI message in real-time
+          this.updateMessage(aiMessageId, aiResponse);
+        }
+      } else {
+        console.error('No readable stream available');
+        // Fallback: try to read as regular text
+        const text = await response.text();
+        console.log('Fallback text response:', text);
+        this.updateMessage(aiMessageId, text);
+      }
+
+    } catch (error) {
+      console.error('Error sending message:', error);
+      console.error('Error details:', {
+        message: error.message,
+        stack: error.stack,
+        apiUrl: this.config.apiUrl,
+        response: response ? {
+          status: response.status,
+          statusText: response.statusText,
+          url: response.url,
+          headers: Object.fromEntries(response.headers.entries())
+        } : 'No response object'
+      });
+      this.updateMessage(aiMessageId, `Error: ${error.message}. Check console for details.`);
+    }
+  }
+
+  addMessageToChat(role, content) {
+    const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    const messagesContainer = this.container.querySelector('.flux-chat-messages');
+
+    if (!messagesContainer) return messageId;
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `flux-message flux-message-${role}`;
+    messageDiv.id = messageId;
+
+    messageDiv.innerHTML = `
+      <div class="flux-message-content">
+        <div class="flux-message-text">${content}</div>
+      </div>
+    `;
+
+    // Remove welcome message if it exists
+    const welcomeMessage = messagesContainer.querySelector('.flux-welcome-message');
+    if (welcomeMessage && role === 'user') {
+      welcomeMessage.remove();
+    }
+
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+    return messageId;
+  }
+
+  updateMessage(messageId, content) {
+    const messageElement = document.getElementById(messageId);
+    if (messageElement) {
+      const textElement = messageElement.querySelector('.flux-message-text');
+      if (textElement) {
+        textElement.textContent = content;
+
+        // Auto-scroll to bottom
+        const messagesContainer = this.container.querySelector('.flux-chat-messages');
+        if (messagesContainer) {
+          messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+      }
+    }
+  }
+
+  getConversationHistory() {
+    const messages = [];
+    const messageElements = this.container.querySelectorAll('.flux-message');
+
+    messageElements.forEach(msgEl => {
+      const role = msgEl.classList.contains('flux-message-user') ? 'user' : 'assistant';
+      const content = msgEl.querySelector('.flux-message-text')?.textContent || '';
+
+      if (content.trim()) {
+        messages.push({ role, content });
+      }
+    });
+
+    return messages;
   }
 }
 
