@@ -1,28 +1,22 @@
 {% comment %}
-  FluxChat - AI Shopping Assistant Widget
+  FluxChat - AI Shopping Assistant Widget (React + TypeScript + Tailwind 4)
   This app embed loads on all pages when enabled by merchant
 {% endcomment %}
 
-<script>
-  // FluxChat Configuration
-  window.FluxChatConfig = {
-    storeId: "{{ shop.permanent_domain | replace: '.myshopify.com', '' }}",
-    apiUrl: "{{ app.api_url }}/api/chat",
-    position: {{ block.settings.position | json }},
-    theme: {{ block.settings.theme | json }},
-    welcomeMessage: {{ block.settings.welcome_message | json }}
-  };
-</script>
+<!-- React Chat Widget Container -->
+<div
+  id="flux-chat-widget"
+  data-store-name="{{ shop.name }}"
+  data-theme="{{ block.settings.theme }}"
+  data-api-url="{{ app.api_url }}/api/chat"
+  style="z-index: 999999 !important; position: relative !important;"
+>
+</div>
 
+<!-- Load Widget CSS -->
 {{ 'chat-widget.css' | asset_url | stylesheet_tag }}
 
-<!-- Load components and services first -->
-<script src="{{ 'utils-event-bus.js' | asset_url }}"></script>
-<script src="{{ 'services-chat-api.js' | asset_url }}"></script>
-<script src="{{ 'components-chat-button.js' | asset_url }}"></script>
-<script src="{{ 'components-chat-modal.js' | asset_url }}"></script>
-
-<!-- Load main widget last -->
+<!-- Load Widget JS -->
 <script src="{{ 'chat-widget.js' | asset_url }}" defer></script>
 
 {% schema %}
@@ -52,19 +46,19 @@
       "label": "Color Theme",
       "options": [
         {
-          "value": "light",
-          "label": "Light"
+          "value": "professional",
+          "label": "Professional (Dark)"
         },
         {
-          "value": "dark",
-          "label": "Dark"
+          "value": "modern",
+          "label": "Modern (Blue)"
         },
         {
-          "value": "auto",
-          "label": "Auto (Match Theme)"
+          "value": "minimal",
+          "label": "Minimal (Black & White)"
         }
       ],
-      "default": "light"
+      "default": "professional"
     },
     {
       "type": "text",

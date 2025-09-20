@@ -78,8 +78,9 @@ export default function Dashboard() {
               <div style={{ flex: 1 }} />
               <Button
                 variant="secondary"
-                url={`https://${store.shopifyDomain}/admin/themes/current/editor?context=apps&template=index`}
+                url={`https://admin.shopify.com/store/${store.shopifyDomain.replace('.myshopify.com', '')}/themes/current/editor?context=apps`}
                 external
+                target="_blank"
               >
                 App embed settings
               </Button>
