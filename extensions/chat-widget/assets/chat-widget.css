@@ -10,8 +10,8 @@
 
 /* Chat Button */
 .flux-chat-button {
-  width: 56px;
-  height: 56px;
+  width: 55px;
+  height: 55px;
   background: #434343;
   border: none;
   border-radius: 50%;
@@ -20,7 +20,7 @@
   align-items: center;
   justify-content: center;
   color: white;
-  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
   transition: all 0.3s ease;
   position: relative;
 }
@@ -41,13 +41,14 @@
 /* Chat Modal */
 .flux-chat-modal {
   position: absolute;
-  bottom: 70px;
+  bottom: 85px;
   right: 0;
-  width: 320px;
-  height: 400px;
+  width: 360px;
+  height: 90vh;
+  max-height: 520px;
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -67,9 +68,10 @@
 
 /* Chat Header */
 .flux-chat-header {
-  background: linear-gradient(to right, #434343, #2a2a2a);
+  background: linear-gradient(125.39deg, #434343 -4.89%, #2a2a2a 101.76%);
   color: white;
-  padding: 16px;
+  padding: 16px 20px;
+  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -100,14 +102,16 @@
   margin: 0;
   font-size: 16px;
   font-weight: 500;
+  line-height: 19.36px;
 }
 
 .flux-chat-status {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 14px;
-  opacity: 0.8;
+  font-size: 12px;
+  font-weight: 400;
+  opacity: 0.75;
   margin-top: 2px;
 }
 
@@ -118,6 +122,14 @@
   border-radius: 50%;
 }
 
+/* Header Actions */
+.flux-chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.flux-chat-menu-button,
 .flux-chat-close {
   width: 32px;
   height: 32px;
@@ -132,8 +144,62 @@
   transition: background-color 0.2s ease;
 }
 
+.flux-chat-menu-button:hover,
 .flux-chat-close:hover {
   background: rgba(255, 255, 255, 0.2);
+}
+
+/* Menu Popover */
+.flux-chat-menu {
+  position: relative;
+}
+
+.flux-chat-popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 160px;
+  z-index: 1000;
+  overflow: hidden;
+  transform: scale(0.95);
+  opacity: 0;
+  transition: all 0.15s ease;
+  pointer-events: none;
+}
+
+.flux-chat-popover.visible {
+  transform: scale(1);
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.flux-popover-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  cursor: pointer;
+  border: none;
+  background: none;
+  width: 100%;
+  text-align: left;
+  font-size: 14px;
+  color: #374151;
+  transition: background-color 0.15s ease;
+}
+
+.flux-popover-item:hover {
+  background: #f9fafb;
+}
+
+.flux-popover-item svg {
+  width: 16px;
+  height: 16px;
+  color: #6b7280;
 }
 
 /* Chat Messages */
@@ -184,9 +250,9 @@
 }
 
 .flux-message-content {
-  max-width: 80%;
-  padding: 8px 12px;
-  border-radius: 16px;
+  max-width: 85%;
+  padding: 12px 16px;
+  border-radius: 18px;
   font-size: 14px;
   line-height: 1.4;
 }
@@ -303,13 +369,31 @@
 /* Responsive */
 @media (max-width: 640px) {
   .flux-chat-modal {
-    width: calc(100vw - 40px);
-    height: calc(100vh - 140px);
-    max-height: 500px;
+    width: calc(100vw - 32px);
+    height: calc(100vh - 120px);
+    max-height: 520px;
+    max-width: 360px;
   }
 
   .flux-chat-widget {
-    right: 20px;
-    left: 20px;
+    right: 16px;
+    left: 16px;
+  }
+}
+
+@media (max-width: 400px) {
+  .flux-chat-modal {
+    width: calc(100vw - 24px);
+    height: calc(100vh - 100px);
+  }
+
+  .flux-chat-widget {
+    right: 12px;
+    left: 12px;
+  }
+
+  .flux-chat-button {
+    width: 50px;
+    height: 50px;
   }
 }

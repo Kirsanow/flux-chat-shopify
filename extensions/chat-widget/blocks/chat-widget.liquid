@@ -3,10 +3,11 @@
   This app embed loads on all pages when enabled by merchant
 {% endcomment %}
 
-<!-- React Chat Widget Container -->
+<!-- Chat Widget Container -->
 <div
   id="flux-chat-widget"
   data-store-name="{{ shop.name }}"
+  data-store-id="{{ shop.domain }}"
   data-theme="{{ block.settings.theme }}"
   data-api-url="/apps/flux-chat/api/proxy"
   style="z-index: 999999 !important; position: relative !important;"
@@ -15,6 +16,9 @@
 
 <!-- Load Widget CSS -->
 {{ 'chat-widget.css' | asset_url | stylesheet_tag }}
+
+<!-- Load Storage Utility First -->
+<script src="{{ 'chat-storage.js' | asset_url }}"></script>
 
 <!-- Load Widget JS -->
 <script src="{{ 'chat-widget.js' | asset_url }}" defer></script>

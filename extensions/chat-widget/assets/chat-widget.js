@@ -1,15 +1,19 @@
 // FluxChat Widget - Vanilla JavaScript
+/* global FluxChatStorage */
 class FluxChatWidget {
   constructor(container) {
     this.container = container;
     this.isOpen = false;
     this.config = this.getConfig();
+    this.storage = new FluxChatStorage(this.config.storeId);
+    this.sessionId = null; // Will be set on first message
     this.init();
   }
 
   getConfig() {
     return {
       storeName: this.container.dataset.storeName || 'Store',
+      storeId: this.container.dataset.storeId || 'unknown-store',
       theme: this.container.dataset.theme || 'professional',
       apiUrl: this.container.dataset.apiUrl || '/api/chat'
     };
@@ -18,6 +22,20 @@ class FluxChatWidget {
   init() {
     this.render();
     this.bindEvents();
+    this.loadExistingSession();
+  }
+
+  // Check if user has existing session and show status
+  loadExistingSession() {
+    const existingSessionId = this.storage.getSessionId();
+    if (existingSessionId) {
+      console.log('FluxChat: Found existing session:', existingSessionId);
+      console.log('FluxChat: Storage info:', this.storage.getStorageInfo());
+      // Note: We don't load conversation history yet - that's Task 5 (optional)
+      // For now we just acknowledge the existing session
+    } else {
+      console.log('FluxChat: No existing session found');
+    }
   }
 
   render() {
@@ -53,9 +71,22 @@ class FluxChatWidget {
               </div>
             </div>
           </div>
-          <button class="flux-chat-close" aria-label="Close chat">
-            ${this.getCloseIcon()}
-          </button>
+          <div class="flux-chat-header-actions">
+            <div class="flux-chat-menu">
+              <button class="flux-chat-menu-button" aria-label="Chat menu">
+                ${this.getMenuIcon()}
+              </button>
+              <div class="flux-chat-popover">
+                <button class="flux-popover-item flux-reset-conversation">
+                  ${this.getResetIcon()}
+                  Reset conversation
+                </button>
+              </div>
+            </div>
+            <button class="flux-chat-close" aria-label="Close chat">
+              ${this.getCloseIcon()}
+            </button>
+          </div>
         </div>
         <div class="flux-chat-messages">
           <div class="flux-welcome-message">
@@ -101,6 +132,25 @@ class FluxChatWidget {
     `;
   }
 
+  getMenuIcon() {
+    return `
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+        <path d="M12 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" fill="currentColor"/>
+        <path d="M19 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" fill="currentColor"/>
+        <path d="M5 13a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" fill="currentColor"/>
+      </svg>
+    `;
+  }
+
+  getResetIcon() {
+    return `
+      <svg width="16" height="16" viewBox="0 0 20 20" fill="none">
+        <path d="M17.7782 9.16601C17.7782 9.62625 17.4051 9.99935 16.9449 9.99935C16.4846 9.99935 16.1115 9.62625 16.1115 9.16601C16.1115 7.32507 14.6192 5.83268 12.7782 5.83268H5.48268L6.73096 7.21966C7.03884 7.56175 7.01111 8.08865 6.66902 8.39654C6.32692 8.70442 5.80002 8.67669 5.49213 8.3346L2.99213 5.55682C2.69564 5.22738 2.70889 4.72349 3.02229 4.41009L5.52229 1.91009C5.84773 1.58466 6.37536 1.58466 6.7008 1.91009C7.02624 2.23553 7.02624 2.76317 6.7008 3.0886L5.62339 4.16601H12.7782C15.5396 4.16601 17.7782 6.40459 17.7782 9.16601Z" fill="currentColor"/>
+        <path d="M2.22266 10.8327C2.22266 10.3724 2.59575 9.99935 3.05599 9.99935C3.51623 9.99935 3.88932 10.3724 3.88932 10.8327C3.88932 12.6736 5.38171 14.166 7.22266 14.166H14.5182L13.2699 12.779C12.962 12.4369 12.9898 11.91 13.3319 11.6022C13.6739 11.2943 14.2009 11.322 14.5087 11.6641L17.0087 14.4419C17.3052 14.7713 17.292 15.2752 16.9786 15.5886L14.4786 18.0886C14.1531 18.414 13.6255 18.414 13.3001 18.0886C12.9746 17.7632 12.9746 17.2355 13.3001 16.9101L14.3775 15.8327H7.22266C4.46123 15.8327 2.22266 13.5941 2.22266 10.8327Z" fill="currentColor"/>
+      </svg>
+    `;
+  }
+
   bindEvents() {
     // Toggle chat
     const button = this.container.querySelector('.flux-chat-button');
@@ -112,6 +162,32 @@ class FluxChatWidget {
 
     if (closeBtn) {
       closeBtn.addEventListener('click', () => this.close());
+    }
+
+    // Handle menu popover
+    const menuBtn = this.container.querySelector('.flux-chat-menu-button');
+    const popover = this.container.querySelector('.flux-chat-popover');
+    const resetBtn = this.container.querySelector('.flux-reset-conversation');
+
+    if (menuBtn && popover) {
+      menuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        popover.classList.toggle('visible');
+      });
+
+      // Close popover when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!this.container.contains(e.target)) {
+          popover.classList.remove('visible');
+        }
+      });
+    }
+
+    if (resetBtn) {
+      resetBtn.addEventListener('click', () => {
+        this.resetConversation();
+        popover.classList.remove('visible');
+      });
     }
 
     // Handle message input
@@ -145,8 +221,48 @@ class FluxChatWidget {
     this.bindEvents();
   }
 
+  resetConversation() {
+    // Clear session storage
+    this.storage.clearSession();
+    this.sessionId = null;
+
+    // Clear messages and show welcome message
+    const messagesContainer = this.container.querySelector('.flux-chat-messages');
+    if (messagesContainer) {
+      messagesContainer.innerHTML = `
+        <div class="flux-welcome-message">
+          <div class="flux-message-avatar">💬</div>
+          <p>Hi! How can I help you today?</p>
+        </div>
+      `;
+    }
+
+    console.log('FluxChat: Conversation reset');
+  }
+
   async sendMessage(message) {
     if (!message.trim()) return;
+
+    // LAZY SESSION CREATION: Only create session on first user message
+    if (!this.sessionId) {
+      this.sessionId = this.storage.getSessionId();
+
+      if (!this.sessionId) {
+        // First message ever - create new session
+        this.sessionId = this.storage.createSession();
+        console.log('FluxChat: Created new session for first message:', this.sessionId);
+
+        // Clear welcome message on first interaction
+        const messagesContainer = this.container.querySelector('.flux-chat-messages');
+        const welcomeMessage = messagesContainer.querySelector('.flux-welcome-message');
+        if (welcomeMessage) {
+          welcomeMessage.remove();
+          console.log('FluxChat: Cleared welcome message');
+        }
+      } else {
+        console.log('FluxChat: Using existing session:', this.sessionId);
+      }
+    }
 
     // Add user message to chat
     this.addMessageToChat('user', message);
@@ -161,16 +277,21 @@ class FluxChatWidget {
       const messages = this.getConversationHistory();
 
       console.log('Sending request to:', this.config.apiUrl);
+      console.log('Session ID:', this.sessionId);
       console.log('Messages:', messages);
 
-      // Call streaming API
+      // Call streaming API with session ID
       response = await fetch(this.config.apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'ngrok-skip-browser-warning': 'true',
         },
-        body: JSON.stringify({ messages }),
+        body: JSON.stringify({
+          messages,
+          sessionId: this.sessionId,
+          storeId: this.config.storeId
+        }),
       });
 
       console.log('Response status:', response.status);
@@ -233,7 +354,7 @@ class FluxChatWidget {
   }
 
   addMessageToChat(role, content) {
-    const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
+    const messageId = 'msg-' + Date.now() + '-' + Math.random().toString(36).substring(2, 11);
     const messagesContainer = this.container.querySelector('.flux-chat-messages');
 
     if (!messagesContainer) return messageId;
