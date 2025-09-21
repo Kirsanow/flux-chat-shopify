@@ -276,6 +276,63 @@ shopify app deploy
 
 The app embed will appear in theme editor under "App embeds" section where merchants can toggle it on/off and configure settings.
 
+## Shopify Session Authentication Architecture
+
+### How App Proxy Authentication Works
+
+FluxChat uses Shopify's `authenticate.public.appProxy(request)` which provides different session contexts:
+
+#### **Three Context Types:**
+
+1. **Store Owner (Admin/Theme Editor)**
+   ```javascript
+   const { session } = await authenticate.public.appProxy(request);
+   // session.shop = "mystore.myshopify.com"
+   // sessionId = `admin-${session.shop}`
+   ```
+
+2. **Logged-in Customer (Storefront)**
+   ```javascript
+   const { session } = await authenticate.public.appProxy(request); // null
+   const customerId = url.searchParams.get('logged_in_customer_id');
+   // sessionId = `customer-${customerId}`
+   ```
+
+3. **Anonymous Visitor (Storefront)**
+   ```javascript
+   const { session } = await authenticate.public.appProxy(request); // null
+   const customerId = url.searchParams.get('logged_in_customer_id'); // null
+   // sessionId = frontendUUID (from localStorage)
+   ```
+
+#### **Session Detection Flow:**
+
+```javascript
+// Backend determines session context automatically
+let realSessionId;
+if (session) {
+  // Store owner in admin/theme editor
+  realSessionId = `admin-${session.shop}`;
+} else {
+  // Check for logged-in customer
+  const customerId = url.searchParams.get('logged_in_customer_id');
+  if (customerId) {
+    realSessionId = `customer-${customerId}`;
+  } else {
+    // Anonymous visitor - use frontend UUID
+    realSessionId = sessionId; // from localStorage
+  }
+}
+```
+
+#### **Message Persistence Strategy:**
+
+- **Theme Editor**: Messages persist using `admin-{shop}` session (no localStorage needed)
+- **Logged-in Customers**: Messages persist using `customer-{id}` session
+- **Anonymous Visitors**: Messages persist using localStorage UUID
+
+This explains competitor behavior - no localStorage in theme editor because authenticated session provides persistence.
+
 ---
 
 **Next Steps**: Create new repo, run `shopify app create`, and start with Phase 1 setup.

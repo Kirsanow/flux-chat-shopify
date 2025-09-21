@@ -156,13 +156,96 @@ export async function loader({ request }: LoaderFunctionArgs) {
 ❌ **Compression/optimization** - Premature optimization
 ❌ **Session expiry** - Let backend handle cleanup, frontend doesn't care
 
+## FINAL APPROACH: Backend Session Detection (No Frontend Detection!)
+
+**Key Discovery:** Shopify's `authenticate.public.appProxy(request)` provides all context:
+- **Store Owner (Admin/Theme Editor):** `session.shop` available
+- **Logged-in Customer (Storefront):** `logged_in_customer_id` parameter
+- **Anonymous Visitor (Storefront):** Both `session` and `logged_in_customer_id` are null/empty
+
+### New Task 1A: Backend Session Detection (Simplified)
+**File:** `app/routes/api.proxy.tsx`
+
+**What:** Let backend handle all session context detection
+
+```javascript
+export async function action({ request }: ActionFunctionArgs) {
+  const { session } = await authenticate.public.appProxy(request);
+  const url = new URL(request.url);
+  const body = await request.json();
+  const { messages, sessionId } = body;
+
+  // Backend determines real session ID based on Shopify context
+  let realSessionId;
+  if (session) {
+    // Store owner in admin/theme editor
+    realSessionId = `admin-${session.shop}`;
+  } else {
+    // Check for logged-in customer
+    const customerId = url.searchParams.get('logged_in_customer_id');
+    if (customerId) {
+      realSessionId = `customer-${customerId}`;
+    } else {
+      // Anonymous visitor - use frontend UUID
+      realSessionId = sessionId;
+    }
+  }
+
+  // Save conversation with appropriate session ID
+  if (realSessionId) {
+    await saveConversation(realSessionId, session?.shop || 'anonymous', messages);
+  }
+
+  // Existing AI logic stays the same
+  const result = await streamText({...});
+  return result.toTextStreamResponse();
+}
+```
+
+**Why:** Backend already knows context - no complex frontend detection needed!
+
+### New Task 1B: Fix Message Persistence in DOM
+**File:** `extensions/chat-widget/assets/chat-widget.js`
+
+**What:** Prevent modal re-rendering that destroys messages
+
+```javascript
+toggle() {
+  this.isOpen = !this.isOpen;
+  this.updateModalVisibility(); // Don't call render()!
+}
+
+updateModalVisibility() {
+  const modal = this.container.querySelector('.flux-chat-modal');
+  if (modal) {
+    modal.style.display = this.isOpen ? 'flex' : 'none';
+  }
+
+  const button = this.container.querySelector('.flux-chat-button');
+  if (button) {
+    button.classList.toggle('open', this.isOpen);
+  }
+}
+```
+
+**Why:** Core issue - render() destroys messages. Just show/hide existing modal.
+
+### Session Strategy Summary:
+1. **Frontend:** Always uses localStorage UUID (simple, no detection)
+2. **Backend:** Detects context and maps to appropriate session:
+   - Admin session → `admin-{shop}`
+   - Customer session → `customer-{id}`
+   - Anonymous → frontend UUID
+
 ## Implementation Progress
 
 ✅ **Task 1 Complete:** FluxChatStorage utility created and integrated into Liquid template
 ✅ **Task 2 Complete:** Lazy session creation integrated into chat widget
-🔄 **Task 3 In Progress:** Update chat API for sessions
-⏳ **Task 4 Pending:** Add reset conversation button
-⏳ **Task 5 Optional:** Load conversation history
+✅ **Task 4 Complete:** Reset conversation button with popover menu
+⏳ **Task 1A Pending:** Backend session detection (api.proxy.tsx)
+⏳ **Task 1B Pending:** Fix DOM message persistence (chat-widget.js)
+⏳ **Task 3 Optional:** Advanced conversation loading from backend
+⏳ **Task 5 Optional:** Database conversation history
 
 ## Success Criteria
 

@@ -1,7 +1,8 @@
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { streamText } from 'ai';
-import { aiModel, systemPrompt } from '../lib/ai.server.js';
-import { authenticate } from "../shopify.server.js";
+import { aiModel, systemPrompt } from '../lib/ai.server';
+import { authenticate } from "../shopify.server";
+import { getOrCreateConversation, saveMessage } from '../lib/conversation.server';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { session } = await authenticate.public.appProxy(request);
@@ -18,10 +19,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 export async function action({ request }: ActionFunctionArgs) {
   const { session } = await authenticate.public.appProxy(request);
-
-  if (!session) {
-    return new Response("Unauthorized", { status: 401 });
-  }
+  const url = new URL(request.url);
 
   // Only allow POST requests
   if (request.method !== 'POST') {
@@ -29,14 +27,69 @@ export async function action({ request }: ActionFunctionArgs) {
   }
 
   let messages: any[] = [];
+  let sessionId: string | null = null;
 
   try {
     const body = await request.json();
     messages = body.messages;
+    sessionId = body.sessionId;
+
+    // Backend session detection based on Shopify context
+    let realSessionId: string;
+    let sessionType: string;
+    let storeId: string;
+
+    if (session) {
+      // Store owner in admin/theme editor
+      realSessionId = `admin-${session.shop}`;
+      sessionType = 'admin';
+      storeId = session.shop;
+    } else {
+      // Check for logged-in customer
+      const customerId = url.searchParams.get('logged_in_customer_id');
+      const shopDomain = url.searchParams.get('shop');
+
+      if (!shopDomain) {
+        return new Response('Missing shop parameter', { status: 400 });
+      }
+
+      storeId = shopDomain;
+
+      if (customerId) {
+        realSessionId = `customer-${customerId}`;
+        sessionType = 'customer';
+      } else {
+        // Anonymous visitor - use frontend UUID or create new
+        realSessionId = sessionId || `anon-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+        sessionType = 'anonymous';
+      }
+    }
+
+    console.log('FluxChat Session Detection:', {
+      realSessionId,
+      sessionType,
+      storeId,
+      hasShopifySession: !!session,
+      customerId: url.searchParams.get('logged_in_customer_id')
+    });
 
     // Validate messages array
     if (!Array.isArray(messages)) {
       return new Response('Invalid messages format', { status: 400 });
+    }
+
+    // Get or create conversation
+    const conversation = await getOrCreateConversation(
+      realSessionId,
+      sessionType,
+      storeId,
+      sessionType === 'customer' ? url.searchParams.get('logged_in_customer_id') || undefined : undefined
+    );
+
+    // Save user message if this is a new message (not just loading conversation)
+    const userMessage = messages[messages.length - 1];
+    if (userMessage && userMessage.role === 'user' && conversation) {
+      await saveMessage(conversation.id, 'user', userMessage.content);
     }
 
     // Create streaming response
@@ -47,7 +100,6 @@ export async function action({ request }: ActionFunctionArgs) {
         role: msg.role,
         content: msg.content,
       })),
-      maxTokens: 500, // Limit response length for testing
       temperature: 0.7, // Balanced creativity
     });
 

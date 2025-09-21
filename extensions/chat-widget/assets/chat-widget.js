@@ -42,9 +42,12 @@ class FluxChatWidget {
     this.container.innerHTML = `
       <div class="flux-chat-widget" data-theme="${this.config.theme}">
         ${this.renderButton()}
-        ${this.isOpen ? this.renderModal() : ''}
+        ${this.renderModal()}
       </div>
     `;
+
+    // Set initial visibility state
+    this.updateModalVisibility();
   }
 
   renderButton() {
@@ -211,14 +214,40 @@ class FluxChatWidget {
 
   toggle() {
     this.isOpen = !this.isOpen;
-    this.render();
-    this.bindEvents();
+    this.updateModalVisibility();
+    this.updateButtonState();
   }
 
   close() {
     this.isOpen = false;
-    this.render();
-    this.bindEvents();
+    this.updateModalVisibility();
+    this.updateButtonState();
+  }
+
+  updateModalVisibility() {
+    const modal = this.container.querySelector('.flux-chat-modal');
+    if (modal) {
+      modal.style.display = this.isOpen ? 'flex' : 'none';
+    } else if (this.isOpen) {
+      // Modal doesn't exist yet, create it
+      this.render();
+      this.bindEvents();
+    }
+  }
+
+  updateButtonState() {
+    const button = this.container.querySelector('.flux-chat-button');
+    if (button) {
+      if (this.isOpen) {
+        button.classList.add('open');
+        button.setAttribute('aria-label', 'Close chat');
+        button.innerHTML = this.getCloseIcon();
+      } else {
+        button.classList.remove('open');
+        button.setAttribute('aria-label', 'Open chat');
+        button.innerHTML = this.getChatIcon();
+      }
+    }
   }
 
   resetConversation() {
