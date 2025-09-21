@@ -1,6 +1,6 @@
 import { ActionFunctionArgs, LoaderFunctionArgs, json } from "@remix-run/node";
 import { streamText } from 'ai';
-import { aiModel, systemPrompt } from '~/lib/ai.server';
+import { aiModel, systemPrompt } from '../lib/ai.server.js';
 import { cors } from "remix-utils/cors";
 
 export async function action({ request }: ActionFunctionArgs) {

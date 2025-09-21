@@ -168,6 +168,7 @@ class FluxChatWidget {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'ngrok-skip-browser-warning': 'true',
         },
         body: JSON.stringify({ messages }),
       });
@@ -294,10 +295,22 @@ class FluxChatWidget {
 
 // Initialize widget when DOM is ready
 function initFluxChat() {
+  console.log('FluxChat: Attempting initialization...');
   const container = document.getElementById('flux-chat-widget');
+  console.log('FluxChat: Container found:', !!container);
+
   if (container) {
+    // Check if widget already initialized
+    if (container.dataset.initialized === 'true') {
+      console.log('FluxChat: Widget already initialized, skipping');
+      return;
+    }
+
     new FluxChatWidget(container);
-    console.log('FluxChat widget initialized');
+    container.dataset.initialized = 'true';
+    console.log('FluxChat widget initialized successfully');
+  } else {
+    console.log('FluxChat: Container not found, widget cannot initialize');
   }
 }
 

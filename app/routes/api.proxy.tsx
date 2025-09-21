@@ -1,7 +1,7 @@
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
 import { streamText } from 'ai';
-import { aiModel, systemPrompt } from '~/lib/ai.server';
-import { authenticate } from "~/shopify.server";
+import { aiModel, systemPrompt } from '../lib/ai.server.js';
+import { authenticate } from "../shopify.server.js";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { session } = await authenticate.public.appProxy(request);

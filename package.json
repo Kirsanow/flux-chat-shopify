@@ -20,7 +20,8 @@
     "prisma": "prisma",
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
-    "gen-types": "supabase gen types typescript --linked > lib/types/supabase.ts"
+    "gen-types": "supabase gen types typescript --linked > lib/types/supabase.ts",
+    "update-ngrok": "node scripts/update-ngrok.js"
   },
   "type": "module",
   "engines": {
