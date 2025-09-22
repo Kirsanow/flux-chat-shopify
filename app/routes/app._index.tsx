@@ -1,5 +1,6 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
+import { randomUUID } from "crypto";
 import { useLoaderData } from "@remix-run/react";
 import {
   Page,
@@ -17,26 +18,28 @@ import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const { session, admin } = await authenticate.admin(request);
+  const { session } = await authenticate.admin(request);
 
   // Get or create store record
-  let store = await prisma.store.findUnique({
-    where: { shopifyDomain: session.shop },
+  let store = await prisma.stores.findUnique({
+    where: { shopify_domain: session.shop },
   });
 
   if (!store) {
-    store = await prisma.store.create({
+    store = await prisma.stores.create({
       data: {
-        storeName: session.shop.replace(".myshopify.com", ""),
-        shopifyDomain: session.shop,
-        shopifyAccessToken: session.accessToken || "",
-        isActive: true,
+        id: randomUUID(),
+        store_name: session.shop.replace(".myshopify.com", ""),
+        shopify_domain: session.shop,
+        shopify_access_token: session.accessToken || "",
+        is_active: true,
+        updated_at: new Date(),
       },
     });
   }
 
   // Use store name for personalized greeting (no special scope needed)
-  const userName = store?.storeName || "there";
+  const userName = store?.store_name || "there";
 
   return json({
     shop: session.shop,
@@ -78,7 +81,7 @@ export default function Dashboard() {
               <div style={{ flex: 1 }} />
               <Button
                 variant="secondary"
-                url={`https://admin.shopify.com/store/${store.shopifyDomain.replace('.myshopify.com', '')}/themes/current/editor?context=apps`}
+                url={`https://admin.shopify.com/store/${store.shopify_domain.replace('.myshopify.com', '')}/themes/current/editor?context=apps`}
                 external
                 target="_blank"
               >

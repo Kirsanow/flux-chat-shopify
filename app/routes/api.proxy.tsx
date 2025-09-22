@@ -70,7 +70,11 @@ export async function action({ request }: ActionFunctionArgs) {
       sessionType,
       storeId,
       hasShopifySession: !!session,
-      customerId: url.searchParams.get('logged_in_customer_id')
+      sessionObject: session,
+      customerId: url.searchParams.get('logged_in_customer_id'),
+      shopParam: url.searchParams.get('shop'),
+      requestHeaders: Object.fromEntries(request.headers.entries()),
+      requestUrl: request.url
     });
 
     // Validate messages array
