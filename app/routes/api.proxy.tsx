@@ -96,7 +96,7 @@ export async function action({ request }: ActionFunctionArgs) {
       await saveMessage(conversation.id, 'user', userMessage.content);
     }
 
-    // Create streaming response
+    // Create streaming response with callback to save AI response
     const result = await streamText({
       model: aiModel,
       system: systemPrompt,
@@ -105,6 +105,13 @@ export async function action({ request }: ActionFunctionArgs) {
         content: msg.content,
       })),
       temperature: 0.7, // Balanced creativity
+      onFinish: async (result) => {
+        // Save the complete AI response when streaming finishes
+        if (conversation && result.text) {
+          console.log('Saving AI response:', result.text);
+          await saveMessage(conversation.id, 'assistant', result.text);
+        }
+      },
     });
 
     // Return streaming response

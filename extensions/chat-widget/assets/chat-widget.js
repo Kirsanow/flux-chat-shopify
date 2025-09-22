@@ -27,7 +27,13 @@ class FluxChatWidget {
 
   // Check if user has existing session and load conversation history
   async loadExistingSession() {
+    console.log('FluxChat: loadExistingSession() called');
     const existingSessionId = this.storage.getSessionId();
+    console.log('FluxChat: Storage check result:', {
+      existingSessionId,
+      storageInfo: this.storage.getStorageInfo()
+    });
+
     if (existingSessionId) {
       console.log('FluxChat: Found existing session:', existingSessionId);
       console.log('FluxChat: Loading conversation history...');
@@ -36,6 +42,7 @@ class FluxChatWidget {
         await this.loadConversationHistory(existingSessionId);
       } catch (error) {
         console.error('FluxChat: Failed to load conversation history:', error);
+        console.error('Error details:', error);
       }
     } else {
       console.log('FluxChat: No existing session found');
@@ -44,6 +51,8 @@ class FluxChatWidget {
 
   // Load conversation history from server
   async loadConversationHistory(sessionId) {
+    console.log('FluxChat: loadConversationHistory() called with:', sessionId);
+
     // Use app proxy path (works from both theme editor and storefront)
     const url = new URL('/apps/flux-chat/api/conversation', window.location.origin);
     url.searchParams.set('sessionId', sessionId);
@@ -55,38 +64,82 @@ class FluxChatWidget {
       url.searchParams.set('logged_in_customer_id', customerId);
     }
 
-    const response = await fetch(url.toString());
+    console.log('FluxChat: Fetching conversation from URL:', url.toString());
+    console.log('FluxChat: Request params:', {
+      sessionId,
+      shop: this.config.storeId,
+      customerId
+    });
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        'ngrok-skip-browser-warning': 'true'
+      }
+    });
+
+    console.log('FluxChat: API Response:', {
+      status: response.status,
+      statusText: response.statusText,
+      url: response.url,
+      headers: Object.fromEntries(response.headers.entries())
+    });
 
     if (!response.ok) {
-      throw new Error(`Failed to load conversation: ${response.status}`);
+      throw new Error(`Failed to load conversation: ${response.status} ${response.statusText}`);
     }
 
-    const data = await response.json();
+    // Get response text first to debug parsing issues
+    const responseText = await response.text();
+    console.log('FluxChat: Raw response text:', responseText);
+    console.log('FluxChat: Response text length:', responseText.length);
+    console.log('FluxChat: First 500 chars:', responseText.substring(0, 500));
+
+    let data;
+    try {
+      data = JSON.parse(responseText);
+      console.log('FluxChat: Conversation data received:', data);
+    } catch (parseError) {
+      console.error('FluxChat: JSON parse error:', parseError);
+      console.error('FluxChat: Failed to parse response as JSON');
+      throw new Error(`JSON parse failed: ${parseError.message}`);
+    }
 
     if (data.messages && data.messages.length > 0) {
-      console.log('FluxChat: Loaded', data.messages.length, 'messages');
+      console.log('FluxChat: Loaded', data.messages.length, 'messages:', data.messages);
       this.displayConversationHistory(data.messages);
       this.sessionId = data.sessionId; // Update sessionId from server
     } else {
-      console.log('FluxChat: No conversation history found');
+      console.log('FluxChat: No conversation history found - data:', data);
     }
   }
 
   // Display loaded conversation history in chat
   displayConversationHistory(messages) {
+    console.log('FluxChat: displayConversationHistory() called with', messages.length, 'messages');
+
     const messagesContainer = this.container.querySelector('.flux-chat-messages');
-    if (!messagesContainer) return;
+    console.log('FluxChat: Messages container found:', !!messagesContainer);
+
+    if (!messagesContainer) {
+      console.error('FluxChat: Could not find .flux-chat-messages container');
+      return;
+    }
 
     // Clear any existing messages
     messagesContainer.innerHTML = '';
+    console.log('FluxChat: Cleared existing messages');
 
     // Add each message to the chat
-    messages.forEach(message => {
-      this.addMessage(message.content, message.role);
+    messages.forEach((message, index) => {
+      console.log(`FluxChat: Adding message ${index + 1}:`, message);
+      // Normalize role: 'assistant' -> 'ai' for consistent styling
+      const normalizedRole = message.role === 'assistant' ? 'ai' : message.role;
+      this.addMessageToChat(normalizedRole, message.content);
     });
 
     // Scroll to bottom
     messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    console.log('FluxChat: Scrolled to bottom, final message count in DOM:', messagesContainer.children.length);
   }
 
   // Helper to get logged in customer ID (for Shopify customer sessions)
