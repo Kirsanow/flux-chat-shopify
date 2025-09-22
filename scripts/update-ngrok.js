@@ -45,7 +45,7 @@ const filesToUpdate = [
     updates: [
       { pattern: /application_url = "https:\/\/[^"]+"/g, replacement: `application_url = "${newUrl}"` },
       { pattern: /redirect_urls = \[.*?\]/gs, replacement: `redirect_urls = ["${newUrl}/auth/callback", "${newUrl}/auth/shopify/callback", "${newUrl}/api/auth/callback"]` },
-      { pattern: /url = "https:\/\/[^"]+\/api\/proxy"/g, replacement: `url = "${newUrl}/api/proxy"` }
+      { pattern: /url = "https:\/\/[^"]+"/g, replacement: `url = "${newUrl}"` }
     ]
   }
 ];

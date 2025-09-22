@@ -9,7 +9,7 @@ datasource db {
   schemas   = ["public"]
 }
 
-model conversations {
+model Conversation {
   id              String     @id
   created_at      DateTime   @default(now())
   updated_at      DateTime

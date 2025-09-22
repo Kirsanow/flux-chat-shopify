@@ -1,4 +1,5 @@
 import prisma from "../db.server";
+import { randomUUID } from "crypto";
 
 export interface ConversationMessage {
   id: string;
@@ -22,47 +23,51 @@ export async function getOrCreateConversation(
   customerId?: string
 ) {
   // Find existing conversation
-  let conversation = await prisma.conversation.findFirst({
+  let conversation = await prisma.conversations.findFirst({
     where: {
-      sessionId,
-      store: { shopifyDomain: storeId }
+      session_id: sessionId,
+      stores: { shopify_domain: storeId }
     },
     include: {
       messages: {
-        orderBy: { createdAt: 'asc' }
+        orderBy: { created_at: 'asc' }
       }
     }
   });
 
   if (!conversation) {
     // Find or create store record
-    let store = await prisma.store.findUnique({
-      where: { shopifyDomain: storeId }
+    let store = await prisma.stores.findUnique({
+      where: { shopify_domain: storeId }
     });
 
     if (!store) {
       // Create basic store record (will be enhanced later)
-      store = await prisma.store.create({
+      store = await prisma.stores.create({
         data: {
-          storeName: storeId.replace('.myshopify.com', ''),
-          shopifyDomain: storeId,
-          shopifyAccessToken: '', // Will be updated during proper store setup
-          isActive: true
+          id: randomUUID(),
+          store_name: storeId.replace('.myshopify.com', ''),
+          shopify_domain: storeId,
+          shopify_access_token: '', // Will be updated during proper store setup
+          is_active: true,
+          updated_at: new Date()
         }
       });
     }
 
     // Create new conversation
-    conversation = await prisma.conversation.create({
+    conversation = await prisma.conversations.create({
       data: {
-        sessionId,
-        sessionType,
-        customerId,
-        storeId: store.id
+        id: randomUUID(),
+        session_id: sessionId,
+        session_type: sessionType,
+        customer_id: customerId,
+        store_id: store.id,
+        updated_at: new Date()
       },
       include: {
         messages: {
-          orderBy: { createdAt: 'asc' }
+          orderBy: { created_at: 'asc' }
         }
       }
     });
@@ -76,18 +81,19 @@ export async function saveMessage(
   role: string,
   content: string
 ) {
-  const message = await prisma.message.create({
+  const message = await prisma.messages.create({
     data: {
-      conversationId,
+      id: randomUUID(),
+      conversation_id: conversationId,
       role,
       content
     }
   });
 
   // Update conversation lastMessageAt
-  await prisma.conversation.update({
+  await prisma.conversations.update({
     where: { id: conversationId },
-    data: { lastMessageAt: new Date() }
+    data: { last_message_at: new Date() }
   });
 
   return message;
@@ -97,25 +103,33 @@ export async function getConversationHistory(
   sessionId: string,
   storeId: string
 ): Promise<ConversationMessage[] | null> {
-  const conversation = await prisma.conversation.findFirst({
+  const conversation = await prisma.conversations.findFirst({
     where: {
-      sessionId,
-      store: { shopifyDomain: storeId }
+      session_id: sessionId,
+      stores: { shopify_domain: storeId }
     },
     include: {
       messages: {
-        orderBy: { createdAt: 'asc' },
+        orderBy: { created_at: 'asc' },
         select: {
           id: true,
           role: true,
           content: true,
-          createdAt: true
+          created_at: true
         }
       }
     }
   });
 
-  return conversation?.messages || null;
+  // Map database fields to interface fields
+  const messages = conversation?.messages.map(msg => ({
+    id: msg.id,
+    role: msg.role,
+    content: msg.content,
+    createdAt: msg.created_at
+  })) || null;
+
+  return messages;
 }
 
 export function formatDateGroup(date: Date): string {
