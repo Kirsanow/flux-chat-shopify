@@ -22,7 +22,7 @@ export async function getOrCreateConversation(
   storeId: string,
   customerId?: string
 ) {
-  // Find existing conversation
+  // Find existing conversation by session_id + store
   let conversation = await prisma.conversations.findFirst({
     where: {
       session_id: sessionId,
@@ -59,7 +59,7 @@ export async function getOrCreateConversation(
     conversation = await prisma.conversations.create({
       data: {
         id: randomUUID(),
-        session_id: sessionId,
+        session_id: sessionId, // String like "admin-shop.com", "customer-123", or UUID
         session_type: sessionType,
         customer_id: customerId,
         store_id: store.id,

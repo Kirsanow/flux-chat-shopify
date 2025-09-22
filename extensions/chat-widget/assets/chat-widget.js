@@ -25,17 +25,86 @@ class FluxChatWidget {
     this.loadExistingSession();
   }
 
-  // Check if user has existing session and show status
-  loadExistingSession() {
+  // Check if user has existing session and load conversation history
+  async loadExistingSession() {
     const existingSessionId = this.storage.getSessionId();
     if (existingSessionId) {
       console.log('FluxChat: Found existing session:', existingSessionId);
-      console.log('FluxChat: Storage info:', this.storage.getStorageInfo());
-      // Note: We don't load conversation history yet - that's Task 5 (optional)
-      // For now we just acknowledge the existing session
+      console.log('FluxChat: Loading conversation history...');
+
+      try {
+        await this.loadConversationHistory(existingSessionId);
+      } catch (error) {
+        console.error('FluxChat: Failed to load conversation history:', error);
+      }
     } else {
       console.log('FluxChat: No existing session found');
     }
+  }
+
+  // Load conversation history from server
+  async loadConversationHistory(sessionId) {
+    // Use app proxy path (works from both theme editor and storefront)
+    const url = new URL('/apps/flux-chat/api/conversation', window.location.origin);
+    url.searchParams.set('sessionId', sessionId);
+    url.searchParams.set('shop', this.config.storeId);
+
+    // Add logged_in_customer_id if available (for customer sessions)
+    const customerId = this.getLoggedInCustomerId();
+    if (customerId) {
+      url.searchParams.set('logged_in_customer_id', customerId);
+    }
+
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+      throw new Error(`Failed to load conversation: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    if (data.messages && data.messages.length > 0) {
+      console.log('FluxChat: Loaded', data.messages.length, 'messages');
+      this.displayConversationHistory(data.messages);
+      this.sessionId = data.sessionId; // Update sessionId from server
+    } else {
+      console.log('FluxChat: No conversation history found');
+    }
+  }
+
+  // Display loaded conversation history in chat
+  displayConversationHistory(messages) {
+    const messagesContainer = this.container.querySelector('.flux-chat-messages');
+    if (!messagesContainer) return;
+
+    // Clear any existing messages
+    messagesContainer.innerHTML = '';
+
+    // Add each message to the chat
+    messages.forEach(message => {
+      this.addMessage(message.content, message.role);
+    });
+
+    // Scroll to bottom
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  }
+
+  // Helper to get logged in customer ID (for Shopify customer sessions)
+  getLoggedInCustomerId() {
+    // Check URL params first (most reliable)
+    const urlParams = new URLSearchParams(window.location.search);
+    const customerId = urlParams.get('logged_in_customer_id');
+
+    if (customerId) {
+      return customerId;
+    }
+
+    // Fallback: check if there's a customer object in Shopify theme
+    if (typeof window.Shopify !== 'undefined' && window.Shopify.customerid) {
+      return window.Shopify.customerid;
+    }
+
+    return null;
   }
 
   render() {

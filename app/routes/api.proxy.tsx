@@ -3,6 +3,7 @@ import { streamText } from 'ai';
 import { aiModel, systemPrompt } from '../lib/ai.server';
 import { authenticate } from "../shopify.server";
 import { getOrCreateConversation, saveMessage } from '../lib/conversation.server';
+import { randomUUID } from "crypto";
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { session } = await authenticate.public.appProxy(request);
@@ -73,8 +74,7 @@ export async function action({ request }: ActionFunctionArgs) {
       sessionObject: session,
       customerId: url.searchParams.get('logged_in_customer_id'),
       shopParam: url.searchParams.get('shop'),
-      requestHeaders: Object.fromEntries(request.headers.entries()),
-      requestUrl: request.url
+      frontendSessionId: sessionId
     });
 
     // Validate messages array
