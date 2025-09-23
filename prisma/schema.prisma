@@ -9,7 +9,7 @@ datasource db {
   schemas   = ["public"]
 }
 
-model Conversation {
+model conversations {
   id              String     @id
   created_at      DateTime   @default(now())
   updated_at      DateTime
@@ -51,7 +51,7 @@ model products {
   handle             String?
   product_type       String?
   vendor             String?
-  tags               String[]
+  tags               String[]  // Original Shopify tags
   status             String    @default("active")
   price_min          Decimal?
   price_max          Decimal?
@@ -59,13 +59,20 @@ model products {
   image_urls         String[]
   total_inventory    Int?
   available_for_sale Boolean   @default(true)
+
+
+  // Embedding and search
   embedding          Float[]
   embedding_model    String?
   last_embedded      DateTime?
   search_metadata    Json?
+
+  // Sync tracking
   last_synced        DateTime?
   sync_version       Int       @default(1)
   sync_metadata      Json?
+
+  // Relationships
   store_id           String
   stores             stores    @relation(fields: [store_id], references: [id], onDelete: Cascade)
 
@@ -75,7 +82,7 @@ model products {
   @@schema("public")
 }
 
-model Session {
+model session {
   id            String    @id
   shop          String
   state         String
@@ -92,7 +99,6 @@ model Session {
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
 
-  @@map("session")
   @@schema("public")
 }
 

@@ -1,7 +1,8 @@
 import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { randomUUID } from "crypto";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
+import { useState } from "react";
 import {
   Page,
   Text,
@@ -12,8 +13,10 @@ import {
   Badge,
   Icon,
   Box,
+  Banner,
+  Spinner,
 } from "@shopify/polaris";
-import { AppExtensionIcon } from "@shopify/polaris-icons";
+import { AppExtensionIcon, ProductIcon } from "@shopify/polaris-icons";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 
@@ -38,6 +41,17 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     });
   }
 
+  // Get product sync status
+  const productCount = await prisma.products.count({
+    where: { store_id: store.id },
+  });
+
+  const lastSyncedProduct = await prisma.products.findFirst({
+    where: { store_id: store.id },
+    orderBy: { last_synced: 'desc' },
+    select: { last_synced: true },
+  });
+
   // Use store name for personalized greeting (no special scope needed)
   const userName = store?.store_name || "there";
 
@@ -45,11 +59,43 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     shop: session.shop,
     store,
     userName,
+    productCount,
+    lastSync: lastSyncedProduct?.last_synced,
   });
 };
 
 export default function Dashboard() {
-  const { store, userName } = useLoaderData<typeof loader>();
+  const { store, userName, productCount, lastSync } = useLoaderData<typeof loader>();
+  const fetcher = useFetcher();
+  const revalidator = useRevalidator();
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+
+  const isLoading = fetcher.state === "submitting";
+
+  const handleSync = () => {
+    fetcher.submit(
+      {},
+      {
+        method: "POST",
+        action: "/api/products/sync",
+      }
+    );
+  };
+
+  // Handle sync completion
+  if (fetcher.data && fetcher.state === "idle" && !syncResult) {
+    const data = fetcher.data as any; // Type assertion for fetcher data
+    if (data.success) {
+      setSyncResult(`Successfully synced ${data.totalSynced} products!`);
+      // Revalidate loader data to update product count and last sync
+      setTimeout(() => {
+        revalidator.revalidate();
+        setSyncResult(null);
+      }, 2000);
+    } else {
+      setSyncResult(`Sync failed: ${data.error}`);
+    }
+  }
 
   return (
     <Page>
@@ -68,6 +114,131 @@ export default function Dashboard() {
             <Button variant="tertiary">What's new</Button>
           </InlineStack>
         </InlineStack>
+
+        {/* Sync Result Banner */}
+        {syncResult && (
+          <Banner
+            title={(fetcher.data as any)?.success ? "Sync Completed" : "Sync Failed"}
+            tone={(fetcher.data as any)?.success ? "success" : "critical"}
+            onDismiss={() => setSyncResult(null)}
+          >
+            <p>{syncResult}</p>
+          </Banner>
+        )}
+
+        {/* Product Intelligence Section */}
+        <Card>
+          <BlockStack gap="400">
+            <InlineStack align="space-between">
+              <BlockStack gap="100">
+                <Text as="h3" variant="headingMd">
+                  Product Intelligence
+                </Text>
+                <Text variant="bodyMd" tone="subdued" as="p">
+                  Sync your products to enable AI recommendations and smart search
+                </Text>
+              </BlockStack>
+            </InlineStack>
+
+            <InlineStack blockAlign="center" gap="400" wrap>
+              <InlineStack gap="200" blockAlign="center">
+                <Icon source={ProductIcon} />
+                <BlockStack gap="100">
+                  <Text variant="bodyMd" fontWeight="medium" as="p">
+                    {productCount} products synced
+                  </Text>
+                  {lastSync && (
+                    <Text variant="bodyMd" tone="subdued" as="p">
+                      Last sync: {new Date(lastSync).toLocaleDateString()}
+                    </Text>
+                  )}
+                  {!lastSync && productCount === 0 && (
+                    <Text variant="bodyMd" tone="subdued" as="p">
+                      No products synced yet
+                    </Text>
+                  )}
+                </BlockStack>
+              </InlineStack>
+
+              <Button
+                variant="primary"
+                onClick={handleSync}
+                loading={isLoading}
+                disabled={isLoading}
+              >
+                {isLoading ? "Syncing..." : productCount > 0 ? "Sync Products" : "Import Products"}
+              </Button>
+            </InlineStack>
+
+            {productCount === 0 && (
+              <Box background="bg-surface-info" padding="400" borderRadius="200">
+                <BlockStack gap="200">
+                  <Text variant="bodyMd" fontWeight="medium" as="p">
+                    🚀 Ready to enable AI product recommendations?
+                  </Text>
+                  <Text variant="bodyMd" as="p">
+                    Import your products to let the AI assistant help customers find exactly what they need with intelligent recommendations and inventory-aware responses.
+                  </Text>
+                </BlockStack>
+              </Box>
+            )}
+          </BlockStack>
+        </Card>
+
+        {/* AI Sales Instructions Section */}
+        <Card>
+          <BlockStack gap="400">
+            <InlineStack align="space-between">
+              <BlockStack gap="100">
+                <Text as="h3" variant="headingMd">
+                  AI Sales Instructions
+                </Text>
+                <Text variant="bodyMd" tone="subdued" as="p">
+                  Tell your AI how to help different types of customers
+                </Text>
+              </BlockStack>
+            </InlineStack>
+
+            <InlineStack blockAlign="center" gap="400" wrap>
+              <InlineStack gap="200" blockAlign="center">
+                <BlockStack gap="100">
+                  <Text variant="bodyMd" fontWeight="medium" as="p">
+                    {store.ai_config && (store.ai_config as any).instructions
+                      ? "Instructions configured"
+                      : "No instructions set"}
+                  </Text>
+                  {store.ai_config && (store.ai_config as any).instructions && (
+                    <Text variant="bodyMd" tone="subdued" as="p">
+                      {((store.ai_config as any).instructions as string).slice(0, 100)}...
+                    </Text>
+                  )}
+                </BlockStack>
+              </InlineStack>
+
+              <Button
+                variant="primary"
+                url="/app/ai-instructions"
+              >
+                {store.ai_config && (store.ai_config as any).instructions
+                  ? "Edit Instructions"
+                  : "Add Instructions"}
+              </Button>
+            </InlineStack>
+
+            {!store.ai_config || !(store.ai_config as any).instructions && (
+              <Box background="bg-surface-info" padding="400" borderRadius="200">
+                <BlockStack gap="200">
+                  <Text variant="bodyMd" fontWeight="medium" as="p">
+                    💬 Teach your AI how to sell
+                  </Text>
+                  <Text variant="bodyMd" as="p">
+                    Write simple instructions like "For beginners, recommend our starter kit" and your AI will follow them when helping customers.
+                  </Text>
+                </BlockStack>
+              </Box>
+            )}
+          </BlockStack>
+        </Card>
 
         {/* App Embed Status Section */}
         <Card>
@@ -112,7 +283,41 @@ export default function Dashboard() {
               </InlineStack>
 
               <InlineStack gap="200" align="start">
-                <Badge>2</Badge>
+                <Badge tone={productCount > 0 ? "success" : undefined}>2</Badge>
+                <BlockStack gap="100">
+                  <Text variant="bodyMd" fontWeight="medium" as="p">
+                    Sync Your Products
+                  </Text>
+                  <Text variant="bodyMd" tone="subdued" as="p">
+                    Import your product catalog to enable AI recommendations and smart search
+                  </Text>
+                  {productCount === 0 && (
+                    <Text variant="bodyMd" tone="critical" as="p">
+                      ↑ Use the "Import Products" button above
+                    </Text>
+                  )}
+                </BlockStack>
+              </InlineStack>
+
+              <InlineStack gap="200" align="start">
+                <Badge tone={(store.ai_config && (store.ai_config as any).instructions) ? "success" : undefined}>3</Badge>
+                <BlockStack gap="100">
+                  <Text variant="bodyMd" fontWeight="medium" as="p">
+                    Add AI Sales Instructions
+                  </Text>
+                  <Text variant="bodyMd" tone="subdued" as="p">
+                    Tell your AI how to help different types of customers
+                  </Text>
+                  {(!store.ai_config || !(store.ai_config as any).instructions) && (
+                    <Button url="/app/ai-instructions" variant="plain">
+                      Add Instructions →
+                    </Button>
+                  )}
+                </BlockStack>
+              </InlineStack>
+
+              <InlineStack gap="200" align="start">
+                <Badge>4</Badge>
                 <BlockStack gap="100">
                   <Text variant="bodyMd" fontWeight="medium" as="p">
                     Configure Chat Appearance
@@ -127,7 +332,7 @@ export default function Dashboard() {
               </InlineStack>
 
               <InlineStack gap="200" align="start">
-                <Badge>3</Badge>
+                <Badge>5</Badge>
                 <BlockStack gap="100">
                   <Text variant="bodyMd" fontWeight="medium" as="p">
                     Start Chatting
