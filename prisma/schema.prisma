@@ -82,7 +82,7 @@ model products {
   @@schema("public")
 }
 
-model session {
+model Session {
   id            String    @id
   shop          String
   state         String
@@ -99,6 +99,7 @@ model session {
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
 
+  @@map("session")
   @@schema("public")
 }
 

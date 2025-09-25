@@ -2,7 +2,7 @@ import type { LoaderFunctionArgs } from "@remix-run/node";
 import { json } from "@remix-run/node";
 import { randomUUID } from "crypto";
 import { useLoaderData, useFetcher, useRevalidator } from "@remix-run/react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Page,
   Text,
@@ -68,11 +68,17 @@ export default function Dashboard() {
   const { store, userName, productCount, lastSync } = useLoaderData<typeof loader>();
   const fetcher = useFetcher();
   const revalidator = useRevalidator();
-  const [syncResult, setSyncResult] = useState<string | null>(null);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const isLoading = fetcher.state === "submitting";
 
+  // Determine if we should show the banner - proper Remix way
+  const shouldShowBanner = fetcher.state === "idle" &&
+                           fetcher.data &&
+                           !bannerDismissed;
+
   const handleSync = () => {
+    setBannerDismissed(false); // Reset dismissal state
     fetcher.submit(
       {},
       {
@@ -82,20 +88,18 @@ export default function Dashboard() {
     );
   };
 
-  // Handle sync completion
-  if (fetcher.data && fetcher.state === "idle" && !syncResult) {
-    const data = fetcher.data as any; // Type assertion for fetcher data
-    if (data.success) {
-      setSyncResult(`Successfully synced ${data.totalSynced} products!`);
-      // Revalidate loader data to update product count and last sync
-      setTimeout(() => {
-        revalidator.revalidate();
-        setSyncResult(null);
-      }, 2000);
-    } else {
-      setSyncResult(`Sync failed: ${data.error}`);
+  const handleBannerDismiss = () => {
+    setBannerDismissed(true);
+  };
+
+  // Revalidate loader data after successful sync - proper Remix way
+  useEffect(() => {
+    if (fetcher.state === "idle" &&
+        fetcher.data &&
+        (fetcher.data as any)?.success) {
+      revalidator.revalidate(); // Update product count from loader
     }
-  }
+  }, [fetcher.state, fetcher.data, revalidator]);
 
   return (
     <Page>
@@ -116,13 +120,17 @@ export default function Dashboard() {
         </InlineStack>
 
         {/* Sync Result Banner */}
-        {syncResult && (
+        {shouldShowBanner && (
           <Banner
             title={(fetcher.data as any)?.success ? "Sync Completed" : "Sync Failed"}
             tone={(fetcher.data as any)?.success ? "success" : "critical"}
-            onDismiss={() => setSyncResult(null)}
+            onDismiss={handleBannerDismiss}
           >
-            <p>{syncResult}</p>
+            <p>
+              {(fetcher.data as any)?.success
+                ? `Successfully synced ${(fetcher.data as any).totalSynced} products!`
+                : `Sync failed: ${(fetcher.data as any)?.error}`}
+            </p>
           </Banner>
         )}
 
