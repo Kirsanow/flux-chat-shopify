@@ -1,6 +1,7 @@
 import { ActionFunctionArgs, json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
+import { generateProductEmbeddings } from "../lib/services/product-embeddings.server";
 
 export async function action({ request }: ActionFunctionArgs) {
   if (request.method !== 'POST') {
@@ -171,6 +172,11 @@ export async function action({ request }: ActionFunctionArgs) {
     }
 
     console.log(`Successfully synced ${totalSynced} products for store: ${store.shopify_domain}`);
+
+    // Fire and forget: Generate embeddings in background
+    generateProductEmbeddings(store.id).catch(err =>
+      console.error('Background embedding generation failed:', err)
+    );
 
     return json({
       success: true,
