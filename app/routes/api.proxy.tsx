@@ -4,6 +4,8 @@ import { aiModel, systemPrompt } from '../lib/ai.server';
 import { authenticate } from "../shopify.server";
 import { getOrCreateConversation, saveMessage } from '../lib/conversation.server';
 import { randomUUID } from "crypto";
+import { searchProducts } from '../lib/ai/product-tools.server';
+import prisma from '../db.server';
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { session } = await authenticate.public.appProxy(request);
@@ -96,14 +98,44 @@ export async function action({ request }: ActionFunctionArgs) {
       await saveMessage(conversation.id, 'user', userMessage.content);
     }
 
-    // Create streaming response with callback to save AI response
+    // Get store record with AI instructions
+    const store = await prisma.stores.findUnique({
+      where: { shopify_domain: storeId },
+      select: {
+        id: true,
+        ai_config: true,
+        store_name: true
+      }
+    });
+
+    // Extract merchant instructions from AI config
+    const merchantInstructions = store?.ai_config && typeof store.ai_config === 'object'
+      ? (store.ai_config as any).instructions || ''
+      : '';
+
+    // Create enhanced system prompt with store context
+    const enhancedSystemPrompt = `${systemPrompt}
+
+${merchantInstructions ? `Store-Specific Sales Instructions:
+${merchantInstructions}
+
+When customers ask about products, use the searchProducts tool to find relevant items from our inventory.
+Always mention availability and price when recommending products.` : 'Use the searchProducts tool to help customers find products.'}`;
+
+    // Create streaming response with product search tools
     const result = await streamText({
       model: aiModel,
-      system: systemPrompt,
+      system: enhancedSystemPrompt,
       messages: messages.map((msg: any) => ({
         role: msg.role,
         content: msg.content,
       })),
+      tools: {
+        searchProducts: (args: any) => searchProducts({
+          ...args,
+          storeId: store?.id || storeId // Use store ID for product search
+        })
+      },
       temperature: 0.7, // Balanced creativity
       onFinish: async (result) => {
         // Save the complete AI response when streaming finishes

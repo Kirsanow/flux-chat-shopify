@@ -1,4 +1,12 @@
-import prisma from "../db.server";
+import { PrismaClient } from "@prisma/client";
+
+// Use a dedicated Prisma instance for background operations to avoid connection conflicts
+const backgroundPrisma = new PrismaClient();
+
+// Cleanup on process exit
+process.on('beforeExit', async () => {
+  await backgroundPrisma.$disconnect();
+});
 
 /**
  * Generate embeddings for products that don't have them or have outdated embeddings
@@ -10,8 +18,8 @@ export async function generateProductEmbeddings(storeId: string, batchSize: numb
 
   console.log(`Starting embedding generation for store: ${storeId}`);
 
-  // Get products without embeddings or with outdated embeddings
-  const productsToEmbed = await prisma.products.findMany({
+  // Get products without embeddings
+  const productsToEmbed = await backgroundPrisma.products.findMany({
     where: {
       store_id: storeId,
       available_for_sale: true,
@@ -19,12 +27,6 @@ export async function generateProductEmbeddings(storeId: string, batchSize: numb
       OR: [
         { embedding: { equals: [] } }, // Empty embedding array
         { last_embedded: null },       // Never embedded
-        {
-          // Outdated embeddings (older than last sync)
-          last_embedded: {
-            lt: prisma.products.fields.last_synced
-          }
-        }
       ]
     },
     select: {
@@ -59,7 +61,7 @@ export async function generateProductEmbeddings(storeId: string, batchSize: numb
       const embedding = await generateEmbedding(embeddingText);
 
       // Update product with embedding
-      await prisma.products.update({
+      await backgroundPrisma.products.update({
         where: { id: product.id },
         data: {
           embedding: embedding,
@@ -163,7 +165,7 @@ export async function regenerateAllEmbeddings(storeId: string) {
   console.log(`Starting full embedding regeneration for store: ${storeId}`);
 
   // Clear existing embeddings first
-  await prisma.products.updateMany({
+  await backgroundPrisma.products.updateMany({
     where: {
       store_id: storeId,
     },

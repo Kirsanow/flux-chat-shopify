@@ -64,6 +64,27 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   });
 };
 
+// Prevent Hot Data Revalidation (HDR) loops from background embedding generation
+export function shouldRevalidate({
+  currentUrl,
+  nextUrl,
+  formMethod,
+  defaultShouldRevalidate
+}) {
+  // Allow revalidation for explicit user actions (like navigation)
+  if (formMethod) {
+    return defaultShouldRevalidate;
+  }
+
+  // Prevent automatic revalidation from data mutations during background operations
+  // This stops the feedback loop from embedding generation
+  if (currentUrl.pathname === nextUrl.pathname) {
+    return false;
+  }
+
+  return defaultShouldRevalidate;
+}
+
 export default function Dashboard() {
   const { store, userName, productCount, lastSync } = useLoaderData<typeof loader>();
   const fetcher = useFetcher();
@@ -92,14 +113,20 @@ export default function Dashboard() {
     setBannerDismissed(true);
   };
 
-  // Revalidate loader data after successful sync - proper Remix way
+  // One-time revalidation after successful sync to update product count
   useEffect(() => {
     if (fetcher.state === "idle" &&
         fetcher.data &&
         (fetcher.data as any)?.success) {
-      revalidator.revalidate(); // Update product count from loader
+
+      // Single revalidation to update product count, then prevent future ones
+      const timer = setTimeout(() => {
+        revalidator.revalidate();
+      }, 100); // Small delay to avoid immediate re-trigger
+
+      return () => clearTimeout(timer);
     }
-  }, [fetcher.state, fetcher.data, revalidator]);
+  }, [fetcher.data?.success, revalidator]); // Only depend on success, not fetcher.state
 
   return (
     <Page>

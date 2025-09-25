@@ -173,10 +173,12 @@ export async function action({ request }: ActionFunctionArgs) {
 
     console.log(`Successfully synced ${totalSynced} products for store: ${store.shopify_domain}`);
 
-    // Fire and forget: Generate embeddings in background
-    generateProductEmbeddings(store.id).catch(err =>
-      console.error('Background embedding generation failed:', err)
-    );
+    // Fire and forget: Generate embeddings in background with delay to avoid connection conflicts
+    setTimeout(() => {
+      generateProductEmbeddings(store.id).catch(err =>
+        console.error('Background embedding generation failed:', err)
+      );
+    }, 2000); // 2 second delay to let sync complete database operations
 
     return json({
       success: true,
