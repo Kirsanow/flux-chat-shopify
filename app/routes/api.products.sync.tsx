@@ -52,7 +52,6 @@ export async function action({ request }: ActionFunctionArgs) {
                 }
               }
               totalInventory
-              availableForSale
               createdAt
               updatedAt
             }
@@ -135,7 +134,7 @@ export async function action({ request }: ActionFunctionArgs) {
             image_url: featuredImageUrl,
             image_urls: imageUrls,
             total_inventory: product.totalInventory,
-            available_for_sale: product.availableForSale,
+            available_for_sale: product.status === 'ACTIVE' && product.totalInventory > 0,
             last_synced: new Date(),
             sync_version: { increment: 1 },
             updated_at: new Date(),
@@ -156,7 +155,7 @@ export async function action({ request }: ActionFunctionArgs) {
             image_url: featuredImageUrl,
             image_urls: imageUrls,
             total_inventory: product.totalInventory,
-            available_for_sale: product.availableForSale,
+            available_for_sale: product.status === 'ACTIVE' && product.totalInventory > 0,
             embedding: [], // Will be generated later
             last_synced: new Date(),
             sync_version: 1,

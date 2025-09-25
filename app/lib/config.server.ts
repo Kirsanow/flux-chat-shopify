@@ -1,7 +1,7 @@
 // Server-side configuration for dynamic environment variables
 export const config = {
-  ngrokUrl: process.env.NGROK_URL || 'https://e2b5a50a5195.ngrok-free.app',
-  shopifyAppUrl: process.env.SHOPIFY_APP_URL || process.env.NGROK_URL || 'https://e2b5a50a5195.ngrok-free.app',
+  ngrokUrl: process.env.NGROK_URL || 'https://0fa1c7eac933.ngrok-free.app:3458',
+  shopifyAppUrl: process.env.SHOPIFY_APP_URL || process.env.NGROK_URL || 'https://0fa1c7eac933.ngrok-free.app:3458',
 
   // Get the proxy URL for the chat widget
   getChatProxyUrl: () => {
