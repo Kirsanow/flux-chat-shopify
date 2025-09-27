@@ -1,5 +1,5 @@
 import { ActionFunctionArgs, LoaderFunctionArgs } from "@remix-run/node";
-import { streamText } from 'ai';
+import { streamText, stepCountIs } from 'ai';
 import { aiModel, systemPrompt } from '../lib/ai.server';
 import { authenticate } from "../shopify.server";
 import { getOrCreateConversation, saveMessage } from '../lib/conversation.server';
@@ -113,14 +113,40 @@ export async function action({ request }: ActionFunctionArgs) {
       ? (store.ai_config as any).instructions || ''
       : '';
 
+    // Get a sample of products to understand what the store sells
+    const sampleProducts = await prisma.products.findMany({
+      where: {
+        store_id: store?.id || storeId,
+        available_for_sale: true,
+        status: 'active'
+      },
+      select: {
+        title: true,
+        product_type: true
+      },
+      take: 5
+    });
+
+    const productTypes = [...new Set(sampleProducts.map(p => p.product_type).filter(Boolean))];
+    const productNames = sampleProducts.map(p => p.title).slice(0, 3);
+
     // Create enhanced system prompt with store context
     const enhancedSystemPrompt = `${systemPrompt}
 
-${merchantInstructions ? `Store-Specific Sales Instructions:
-${merchantInstructions}
+STORE CONTEXT:
+- Store Name: ${store?.store_name || 'Our Store'}
+- You are the AI assistant for THIS specific store
+${productTypes.length > 0 ? `- Main Product Categories: ${productTypes.join(', ')}` : ''}
+${productNames.length > 0 ? `- Example Products: ${productNames.join(', ')}` : ''}
 
-When customers ask about products, use the searchProducts tool to find relevant items from our inventory.
-Always mention availability and price when recommending products.` : 'Use the searchProducts tool to help customers find products.'}`;
+${merchantInstructions ? `Store-Specific Sales Instructions:
+${merchantInstructions}` : ''}
+
+CRITICAL INSTRUCTIONS:
+1. When customers ask "what products do you have" or similar, IMMEDIATELY use searchProducts with a broad query
+2. Always pass "${store?.id || storeId}" as the storeId parameter when using searchProducts
+3. Show enthusiasm about the actual products in THIS store's inventory
+4. Never pretend you don't know what products are available - you have direct access via searchProducts tool`;
 
     // Create streaming response with product search tools
     const result = await streamText({
@@ -131,11 +157,10 @@ Always mention availability and price when recommending products.` : 'Use the se
         content: msg.content,
       })),
       tools: {
-        searchProducts: (args: any) => searchProducts({
-          ...args,
-          storeId: store?.id || storeId // Use store ID for product search
-        })
+        searchProducts
       },
+      toolChoice: 'auto',
+      stopWhen: stepCountIs(3), // Allow tool call + response
       temperature: 0.7, // Balanced creativity
       onFinish: async (result) => {
         // Save the complete AI response when streaming finishes

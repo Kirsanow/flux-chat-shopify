@@ -16,7 +16,7 @@ import {
  */
 export const searchProducts = tool({
   description: 'Search for products in the store catalog by keywords, product names, or semantic similarity. Returns available products with pricing and stock information.',
-  parameters: z.object({
+  inputSchema: z.object({
     query: z.string().describe('The search query - can be keywords, product names, or descriptions'),
     searchType: z.enum(['keyword', 'semantic', 'exact_names']).default('keyword').describe('Type of search to perform'),
     maxResults: z.number().default(5).describe('Maximum number of products to return'),
@@ -84,7 +84,7 @@ export const searchProducts = tool({
  */
 export const getProductDetails = tool({
   description: 'Get detailed information about a specific product by its ID',
-  parameters: z.object({
+  inputSchema: z.object({
     productId: z.string().describe('The product ID to get details for'),
     storeId: z.string().describe('The store ID')
   }),
@@ -105,7 +105,7 @@ export const getProductDetails = tool({
  */
 export const checkProductStock = tool({
   description: 'Check real-time stock availability for specific products',
-  parameters: z.object({
+  inputSchema: z.object({
     productIds: z.array(z.string()).describe('Array of product IDs to check stock for'),
     storeId: z.string().describe('The store ID')
   }),

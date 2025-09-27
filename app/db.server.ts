@@ -1,15 +1,21 @@
 import { PrismaClient } from "@prisma/client";
 
 declare global {
-  var prismaGlobal: PrismaClient;
+  var prismaGlobal: PrismaClient | undefined;
 }
 
-if (process.env.NODE_ENV !== "production") {
+let prisma: PrismaClient;
+
+if (process.env.NODE_ENV === "production") {
+  prisma = new PrismaClient();
+} else {
+  // In development, use a global variable to preserve the client across hot reloads
   if (!global.prismaGlobal) {
-    global.prismaGlobal = new PrismaClient();
+    global.prismaGlobal = new PrismaClient({
+      log: ["error", "warn"],
+    });
   }
+  prisma = global.prismaGlobal;
 }
-
-const prisma = global.prismaGlobal ?? new PrismaClient();
 
 export default prisma;

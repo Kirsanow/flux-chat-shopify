@@ -1,12 +1,8 @@
-import { PrismaClient } from "@prisma/client";
+import prisma from "../../db.server";
 
-// Use a dedicated Prisma instance for background operations to avoid connection conflicts
-const backgroundPrisma = new PrismaClient();
-
-// Cleanup on process exit
-process.on('beforeExit', async () => {
-  await backgroundPrisma.$disconnect();
-});
+// For now, use the same Prisma instance to avoid prepared statement conflicts
+// In production, consider using a queue system for background tasks
+const backgroundPrisma = prisma;
 
 /**
  * Generate embeddings for products that don't have them or have outdated embeddings
